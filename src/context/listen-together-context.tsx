@@ -50,9 +50,9 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Sync state from server (for listeners)
+  // Sync state from server (for listeners - full sync including playback)
   const syncFromServer = useCallback(async () => {
-    if (!session || isHostRef.current) return;
+    if (!session) return;
 
     try {
       const res = await fetch(`/api/listen-together/sync?sessionId=${session.id}`);
@@ -66,11 +66,11 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
 
       const data = await res.json();
       
-      // Update participants
+      // Update participants for everyone (host and listeners)
       setSession(prev => prev ? { ...prev, participants: data.participants } : null);
 
-      // Sync track if changed
-      if (data.currentTrack) {
+      // Only sync playback for non-host (listeners)
+      if (!isHostRef.current && data.currentTrack) {
         const trackChanged = !currentTrack || currentTrack.id !== data.currentTrack.id;
         if (trackChanged) {
           play(data.currentTrack as Track);
@@ -94,9 +94,9 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
     }
   }, [session, currentTrack, isPlaying, progress, play, pause, seek]);
 
-  // Start sync polling for listeners
+  // Start sync polling for all session members (host polls for participants, listeners poll for everything)
   useEffect(() => {
-    if (session && !isHost) {
+    if (session) {
       syncIntervalRef.current = setInterval(syncFromServer, SYNC_INTERVAL);
     } else if (syncIntervalRef.current) {
       clearInterval(syncIntervalRef.current);
@@ -108,7 +108,7 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, [session, isHost, syncFromServer]);
+  }, [session, syncFromServer]);
 
   // Host: sync time to server periodically
   useEffect(() => {

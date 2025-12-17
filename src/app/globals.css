@@ -4,6 +4,39 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Hide browser Picture-in-Picture button */
+video::-webkit-media-controls-picture-in-picture-button,
+audio::-webkit-media-controls-picture-in-picture-button,
+video::-webkit-media-controls-panel,
+audio::-webkit-media-controls-panel,
+video::-webkit-media-controls,
+audio::-webkit-media-controls {
+  display: none !important;
+  -webkit-appearance: none !important;
+}
+
+/* Hide Chrome's global media controls */
+::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+}
+
+/* Hide any PiP overlay */
+[data-pip-overlay],
+.pip-overlay,
+.picture-in-picture-overlay {
+  display: none !important;
+}
+
+/* Equalizer animation for playing indicator */
+@keyframes equalizer {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 16px;
+  }
+}
+
 @theme {
   --color-background: #121212;
   --color-foreground: #FFFFFF;
@@ -212,4 +245,37 @@
 /* Hide Next.js error overlay portal */
 nextjs-portal {
   display: none !important;
+}
+
+/* Custom Scrollbar - Spotify Style */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }

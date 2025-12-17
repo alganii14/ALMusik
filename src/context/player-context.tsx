@@ -1,14 +1,18 @@
 "use client";
 
-import React, { createContext, useContext, useState, useRef, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useRef, useCallback, ReactNode, useEffect } from "react";
+import { useAuth } from "./auth-context";
+
+const PREVIEW_DURATION = 30; // 30 seconds preview for non-logged in users
 
 export interface Track {
   id: string;
   title: string;
   artist: string;
   imageUrl: string;
-  previewUrl?: string;
+  audioUrl: string;
   duration: number;
+  lyrics?: string;
 }
 
 interface PlayerContextType {
@@ -19,9 +23,10 @@ interface PlayerContextType {
   volume: number;
   isShuffle: boolean;
   isRepeat: boolean;
+  isPreviewMode: boolean;
   queue: Track[];
-  audioRef: React.MutableRefObject<HTMLAudioElement | null>;
-  play: (track?: Track) => void;
+  playSource: string | null;
+  play: (track?: Track, source?: string) => void;
   pause: () => void;
   togglePlay: () => void;
   next: () => void;
@@ -30,45 +35,13 @@ interface PlayerContextType {
   setVolume: (volume: number) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
-  addToQueue: (track: Track) => void;
   setQueue: (tracks: Track[]) => void;
-  setProgress: (time: number) => void;
-  setDuration: (time: number) => void;
-  setIsPlaying: (playing: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
-const SAMPLE_TRACKS: Track[] = [
-  {
-    id: "1",
-    title: "Kangen",
-    artist: "Dewa 19",
-    imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
-    previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    duration: 217,
-  },
-  {
-    id: "2",
-    title: "Separuh Aku",
-    artist: "Noah",
-    imageUrl: "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=300&h=300&fit=crop",
-    previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    duration: 245,
-  },
-  {
-    id: "3",
-    title: "Laskar Pelangi",
-    artist: "Nidji",
-    imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop",
-    previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    duration: 230,
-  },
-];
-
-export { SAMPLE_TRACKS };
-
 export function PlayerProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -77,40 +50,93 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [volume, setVolumeState] = useState(80);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
-  const [queue, setQueueState] = useState<Track[]>(SAMPLE_TRACKS);
+  const [queue, setQueueState] = useState<Track[]>([]);
+  const [playSource, setPlaySource] = useState<string | null>(null);
 
+  const queueRef = useRef<Track[]>([]);
+  const currentTrackRef = useRef<Track | null>(null);
+  const isShuffleRef = useRef(false);
+  const isRepeatRef = useRef(false);
+  const userRef = useRef(user);
+  
+  // Preview mode for non-logged in users
+  const isPreviewMode = !user;
+  
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    currentTrackRef.current = currentTrack;
+  }, [currentTrack]);
+
+  useEffect(() => {
+    isShuffleRef.current = isShuffle;
+  }, [isShuffle]);
+
+  useEffect(() => {
+    isRepeatRef.current = isRepeat;
+  }, [isRepeat]);
+
+  // Clear media session to hide browser PiP controls
+  const clearMediaSession = () => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+      // Clear all action handlers
+      const actions: MediaSessionAction[] = ['play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'stop'];
+      actions.forEach(action => {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {
+          // Ignore
+        }
+      });
+    }
+  };
+
+  // Initialize audio element
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.volume = volume / 100;
+      // Disable Picture-in-Picture and remote playback
+      const audio = audioRef.current as HTMLAudioElement & { disableRemotePlayback?: boolean };
+      audio.disableRemotePlayback = true;
     }
+    
+    clearMediaSession();
 
     const audio = audioRef.current;
 
     const handleTimeUpdate = () => {
       setProgress(audio.currentTime);
-    };
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
-
-    const handleEnded = () => {
-      if (isRepeat) {
+      // Stop at 30 seconds if not logged in
+      if (!userRef.current && audio.currentTime >= PREVIEW_DURATION) {
+        audio.pause();
         audio.currentTime = 0;
-        audio.play();
-      } else {
-        next();
+        setProgress(0);
+        setIsPlaying(false);
+        playNext();
       }
     };
-
-    const handlePlay = () => {
-      setIsPlaying(true);
-    };
-
-    const handlePause = () => {
+    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleEnded = () => {
       setIsPlaying(false);
+      if (isRepeatRef.current) {
+        audio.currentTime = 0;
+        audio.play();
+        setIsPlaying(true);
+      } else {
+        playNext();
+      }
     };
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -125,7 +151,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
-  }, [isRepeat]);
+  }, []);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -133,105 +159,113 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [volume]);
 
-  const play = (track?: Track) => {
-    if (track) {
-      setCurrentTrack(track);
-      if (audioRef.current) {
-        const audioUrl = track.previewUrl;
-        if (audioUrl) {
-          audioRef.current.src = audioUrl;
-          audioRef.current.load();
-          const playPromise = audioRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise.catch((err) => {
-              console.error("Audio play error:", err);
-            });
-          }
-        } else {
-          console.warn("No preview URL for track:", track.title);
-        }
-      }
-    } else if (currentTrack) {
-      if (audioRef.current && currentTrack.previewUrl) {
-        if (!audioRef.current.src || audioRef.current.src !== currentTrack.previewUrl) {
-          audioRef.current.src = currentTrack.previewUrl;
-          audioRef.current.load();
-        }
-        audioRef.current.play().catch(console.error);
-      }
-    } else if (queue.length > 0) {
-      play(queue[0]);
-    }
-  };
+  const playNext = useCallback(() => {
+    const currentQueue = queueRef.current;
+    const current = currentTrackRef.current;
 
-  const pause = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-  };
+    if (!current || currentQueue.length === 0) return;
 
-  const togglePlay = () => {
-    if (isPlaying) {
-      pause();
-    } else {
-      play();
-    }
-  };
-
-  const next = () => {
-    if (!currentTrack || queue.length === 0) return;
-
-    const currentIndex = queue.findIndex((t) => t.id === currentTrack.id);
+    const currentIndex = currentQueue.findIndex((t) => t.id === current.id);
     let nextIndex: number;
 
-    if (isShuffle) {
-      nextIndex = Math.floor(Math.random() * queue.length);
+    if (isShuffleRef.current) {
+      nextIndex = Math.floor(Math.random() * currentQueue.length);
     } else {
-      nextIndex = (currentIndex + 1) % queue.length;
+      nextIndex = (currentIndex + 1) % currentQueue.length;
     }
 
-    play(queue[nextIndex]);
-  };
+    const nextTrack = currentQueue[nextIndex];
+    if (nextTrack && audioRef.current) {
+      setCurrentTrack(nextTrack);
+      setProgress(0);
+      audioRef.current.src = nextTrack.audioUrl;
+      audioRef.current.play().catch(console.error);
+    }
+  }, []);
 
-  const previous = () => {
-    if (!currentTrack || queue.length === 0) return;
+  const play = useCallback((track?: Track, source?: string) => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    if (progress > 3) {
-      seek(0);
+    clearMediaSession();
+
+    if (track) {
+      setCurrentTrack(track);
+      setProgress(0);
+      setPlaySource(source || null);
+      audio.src = track.audioUrl;
+      audio.play().catch(console.error);
+    } else if (currentTrackRef.current) {
+      audio.play().catch(console.error);
+    }
+  }, []);
+
+  const pause = useCallback(() => {
+    audioRef.current?.pause();
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      audio.play().catch(console.error);
+    } else {
+      audio.pause();
+    }
+  }, []);
+
+  const next = useCallback(() => {
+    playNext();
+  }, [playNext]);
+
+  const previous = useCallback(() => {
+    const audio = audioRef.current;
+    const currentQueue = queueRef.current;
+    const current = currentTrackRef.current;
+
+    if (!current || currentQueue.length === 0 || !audio) return;
+
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+      setProgress(0);
       return;
     }
 
-    const currentIndex = queue.findIndex((t) => t.id === currentTrack.id);
-    const prevIndex = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
-    play(queue[prevIndex]);
-  };
+    const currentIndex = currentQueue.findIndex((t) => t.id === current.id);
+    const prevIndex = currentIndex <= 0 ? currentQueue.length - 1 : currentIndex - 1;
 
-  const seek = (time: number) => {
+    const prevTrack = currentQueue[prevIndex];
+    if (prevTrack) {
+      setCurrentTrack(prevTrack);
+      setProgress(0);
+      audio.src = prevTrack.audioUrl;
+      audio.play().catch(console.error);
+    }
+  }, []);
+
+  const seek = useCallback((time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time;
       setProgress(time);
     }
-  };
+  }, []);
 
-  const setVolume = (vol: number) => {
+  const setVolume = useCallback((vol: number) => {
     setVolumeState(vol);
-  };
+  }, []);
 
-  const toggleShuffle = () => {
-    setIsShuffle(!isShuffle);
-  };
+  const toggleShuffle = useCallback(() => {
+    setIsShuffle((prev) => !prev);
+  }, []);
 
-  const toggleRepeat = () => {
-    setIsRepeat(!isRepeat);
-  };
+  const toggleRepeat = useCallback(() => {
+    setIsRepeat((prev) => !prev);
+  }, []);
 
-  const addToQueue = (track: Track) => {
-    setQueueState((prev) => [...prev, track]);
-  };
-
-  const setQueue = (tracks: Track[]) => {
+  const setQueue = useCallback((tracks: Track[]) => {
     setQueueState(tracks);
-  };
+  }, []);
 
   return (
     <PlayerContext.Provider
@@ -243,8 +277,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         volume,
         isShuffle,
         isRepeat,
+        isPreviewMode,
         queue,
-        audioRef,
+        playSource,
         play,
         pause,
         togglePlay,
@@ -254,11 +289,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setVolume,
         toggleShuffle,
         toggleRepeat,
-        addToQueue,
         setQueue,
-        setProgress,
-        setDuration,
-        setIsPlaying,
       }}
     >
       {children}

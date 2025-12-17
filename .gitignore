@@ -36,3 +36,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local env files
+.env
+.env.local
+.env.*.local
+
+# binaries (not needed for Vercel)
+*.exe
+*.zip
+/ffmpeg-temp/
+
+# temp files
+/tmp/
+
+# lock files (keep one)
+bun.lock

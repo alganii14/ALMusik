@@ -15,5 +15,47 @@ declare namespace YT {
     getVideoUrl(): string;
     getVideoEmbedCode(): string;
     destroy(): void;
+    loadVideoById(videoId: string | { videoId: string; startSeconds?: number }, startSeconds?: number): void;
+    cueVideoById(videoId: string, startSeconds?: number): void;
   }
+
+  interface PlayerEvent {
+    target: Player;
+    data: number;
+  }
+
+  interface PlayerOptions {
+    height?: string | number;
+    width?: string | number;
+    videoId?: string;
+    playerVars?: {
+      autoplay?: 0 | 1;
+      controls?: 0 | 1;
+      disablekb?: 0 | 1;
+      fs?: 0 | 1;
+      iv_load_policy?: 1 | 3;
+      modestbranding?: 0 | 1;
+      rel?: 0 | 1;
+      showinfo?: 0 | 1;
+      origin?: string;
+    };
+    events?: {
+      onReady?: (event: PlayerEvent) => void;
+      onStateChange?: (event: PlayerEvent) => void;
+      onError?: (event: PlayerEvent) => void;
+    };
+  }
+
+  const Player: {
+    new (element: HTMLElement | string, options: PlayerOptions): Player;
+  };
+
+  const PlayerState: {
+    UNSTARTED: -1;
+    ENDED: 0;
+    PLAYING: 1;
+    PAUSED: 2;
+    BUFFERING: 3;
+    CUED: 5;
+  };
 }

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { kv } from "@vercel/kv";
 
-const PLAYLISTS_DIR = path.join(process.cwd(), "public", "music", "playlists");
+const PLAYLIST_PREFIX = "playlist:";
 
 interface Playlist {
   id: string;
@@ -15,32 +14,47 @@ interface Playlist {
   userId: string;
 }
 
-async function ensurePlaylistsDir() {
-  try {
-    await fs.access(PLAYLISTS_DIR);
-  } catch {
-    await fs.mkdir(PLAYLISTS_DIR, { recursive: true });
-  }
+// Check if KV is available
+function isKVAvailable(): boolean {
+  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
-async function getUserPlaylistsPath(userId: string): Promise<string> {
-  await ensurePlaylistsDir();
-  return path.join(PLAYLISTS_DIR, `${userId}.json`);
+// Fallback in-memory storage for development
+declare global {
+  // eslint-disable-next-line no-var
+  var userPlaylists: Map<string, Playlist[]> | undefined;
+}
+
+function getPlaylistsMap(): Map<string, Playlist[]> {
+  if (!globalThis.userPlaylists) {
+    globalThis.userPlaylists = new Map<string, Playlist[]>();
+  }
+  return globalThis.userPlaylists;
 }
 
 async function getPlaylists(userId: string): Promise<Playlist[]> {
-  try {
-    const filePath = await getUserPlaylistsPath(userId);
-    const data = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
+  if (isKVAvailable()) {
+    try {
+      const playlists = await kv.get<Playlist[]>(`${PLAYLIST_PREFIX}${userId}`);
+      return playlists || [];
+    } catch (error) {
+      console.error("KV get playlists error:", error);
+      return [];
+    }
   }
+  return getPlaylistsMap().get(userId) || [];
 }
 
 async function savePlaylists(userId: string, playlists: Playlist[]): Promise<void> {
-  const filePath = await getUserPlaylistsPath(userId);
-  await fs.writeFile(filePath, JSON.stringify(playlists, null, 2));
+  if (isKVAvailable()) {
+    try {
+      await kv.set(`${PLAYLIST_PREFIX}${userId}`, playlists);
+    } catch (error) {
+      console.error("KV save playlists error:", error);
+    }
+  } else {
+    getPlaylistsMap().set(userId, playlists);
+  }
 }
 
 export async function GET(request: Request) {

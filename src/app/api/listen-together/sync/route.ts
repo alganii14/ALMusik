@@ -67,11 +67,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
+  // Return with no-cache headers to ensure fresh data
   return NextResponse.json({
     currentTrack: session.currentTrack,
     isPlaying: session.isPlaying,
     currentTime: session.currentTime,
     participants: session.participants,
     updatedAt: session.updatedAt,
+  }, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+    }
   });
 }

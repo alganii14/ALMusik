@@ -55,7 +55,10 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
     if (!session) return;
 
     try {
-      const res = await fetch(`/api/listen-together/sync?sessionId=${session.id}`);
+      // Add timestamp to bypass any caching
+      const res = await fetch(`/api/listen-together/sync?sessionId=${session.id}&t=${Date.now()}`, {
+        cache: 'no-store',
+      });
       if (!res.ok) {
         if (res.status === 404) {
           // Only show "Session ended" for non-host users

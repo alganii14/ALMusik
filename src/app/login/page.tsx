@@ -39,16 +39,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1a1a1a] to-[#121212] flex flex-col">
-      <header className="flex justify-center py-8">
+    <div className="h-screen bg-gradient-to-b from-[#1a1a1a] to-[#121212] flex flex-col overflow-hidden">
+      <header className="flex justify-center py-4">
         <Link href="/">
-          <ALMusikLogo size={48} />
+          <ALMusikLogo size={40} />
         </Link>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 py-8">
-        <div className="w-full max-w-[400px] bg-[#121212] rounded-lg p-8">
-          <h1 className="text-4xl font-bold text-white text-center mb-8">
+      <main className="flex-1 flex items-start justify-center px-4 py-4 overflow-auto">
+        <div className="w-full max-w-[400px] bg-[#121212] rounded-lg p-6">
+          <h1 className="text-3xl font-bold text-white text-center mb-6">
             Masuk ke ALMusik
           </h1>
 
@@ -112,7 +112,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="relative my-8">
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-[#292929]"></div>
             </div>

@@ -128,15 +128,15 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1a1a1a] to-[#121212] flex flex-col">
-      <header className="flex justify-center py-8">
+    <div className="h-screen bg-gradient-to-b from-[#1a1a1a] to-[#121212] flex flex-col overflow-hidden">
+      <header className="flex justify-center py-4">
         <Link href="/">
-          <ALMusikLogo size={48} />
+          <ALMusikLogo size={40} />
         </Link>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 py-8">
-        <div className="w-full max-w-[400px] bg-[#121212] rounded-lg p-8">
+      <main className="flex-1 flex items-start justify-center px-4 py-4 overflow-auto">
+        <div className="w-full max-w-[400px] bg-[#121212] rounded-lg p-6">
           {step !== "success" && (
             <button
               onClick={() => {

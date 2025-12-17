@@ -58,13 +58,25 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`/api/listen-together/sync?sessionId=${session.id}`);
       if (!res.ok) {
         if (res.status === 404) {
-          setSession(null);
-          setError("Session ended");
+          // Only show "Session ended" for non-host users
+          // Host should never see this unless they ended it themselves
+          if (!isHostRef.current) {
+            setSession(null);
+            setError("Session ended by host");
+          }
         }
         return;
       }
 
       const data = await res.json();
+      
+      // Check if current user is still in participants list
+      const stillInSession = data.participants.some((p: { id: string }) => p.id === user?.id);
+      if (!stillInSession && !isHostRef.current) {
+        setSession(null);
+        setError("You were removed from the session");
+        return;
+      }
       
       // Update participants for everyone (host and listeners)
       setSession(prev => prev ? { ...prev, participants: data.participants } : null);
@@ -92,7 +104,7 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Sync error:", err);
     }
-  }, [session, currentTrack, isPlaying, progress, play, pause, seek]);
+  }, [session, currentTrack, isPlaying, progress, play, pause, seek, user?.id]);
 
   // Start sync polling for all session members (host polls for participants, listeners poll for everything)
   useEffect(() => {

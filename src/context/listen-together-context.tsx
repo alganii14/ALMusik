@@ -61,12 +61,14 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) {
         if (res.status === 404) {
-          // Only show "Session ended" for non-host users
-          // Host should never see this unless they ended it themselves
-          if (!isHostRef.current) {
-            setSession(null);
-            setError("Session ended by host");
+          // Session was deleted - everyone should leave
+          // Stop polling
+          if (syncIntervalRef.current) {
+            clearInterval(syncIntervalRef.current);
+            syncIntervalRef.current = null;
           }
+          setSession(null);
+          setError("Session ended");
         }
         return;
       }

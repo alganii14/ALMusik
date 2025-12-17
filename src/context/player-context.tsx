@@ -58,10 +58,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const isShuffleRef = useRef(false);
   const isRepeatRef = useRef(false);
   const userRef = useRef(user);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
   
   // Preview mode for non-logged in users
   const isPreviewMode = !user;
-  
+
   useEffect(() => {
     userRef.current = user;
   }, [user]);
@@ -87,7 +88,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = 'none';
-      // Clear all action handlers
       const actions: MediaSessionAction[] = ['play', 'pause', 'seekbackward', 'seekforward', 'previoustrack', 'nexttrack', 'stop'];
       actions.forEach(action => {
         try {
@@ -104,7 +104,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.volume = volume / 100;
-      // Disable Picture-in-Picture and remote playback
       const audio = audioRef.current as HTMLAudioElement & { disableRemotePlayback?: boolean };
       audio.disableRemotePlayback = true;
     }
@@ -115,7 +114,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
     const handleTimeUpdate = () => {
       setProgress(audio.currentTime);
-      // Stop at 30 seconds if not logged in
       if (!userRef.current && audio.currentTime >= PREVIEW_DURATION) {
         audio.pause();
         audio.currentTime = 0;
@@ -159,6 +157,39 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [volume]);
 
+  // Safe play to avoid AbortError
+  const safePlay = useCallback(async (audio: HTMLAudioElement) => {
+    if (playPromiseRef.current) {
+      try {
+        await playPromiseRef.current;
+      } catch {
+        // Ignore
+      }
+    }
+    playPromiseRef.current = audio.play();
+    try {
+      await playPromiseRef.current;
+    } catch (e) {
+      if (e instanceof Error && e.name !== 'AbortError') {
+        console.error('Play error:', e);
+      }
+    }
+    playPromiseRef.current = null;
+  }, []);
+
+  const safePause = useCallback(async (audio: HTMLAudioElement) => {
+    if (playPromiseRef.current) {
+      try {
+        await playPromiseRef.current;
+      } catch {
+        // Ignore
+      }
+      playPromiseRef.current = null;
+    }
+    audio.pause();
+  }, []);
+
+
   const playNext = useCallback(() => {
     const currentQueue = queueRef.current;
     const current = currentTrackRef.current;
@@ -179,9 +210,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setCurrentTrack(nextTrack);
       setProgress(0);
       audioRef.current.src = nextTrack.audioUrl;
-      audioRef.current.play().catch(console.error);
+      safePlay(audioRef.current);
     }
-  }, []);
+  }, [safePlay]);
 
   const play = useCallback((track?: Track, source?: string) => {
     const audio = audioRef.current;
@@ -194,26 +225,28 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setProgress(0);
       setPlaySource(source || null);
       audio.src = track.audioUrl;
-      audio.play().catch(console.error);
+      safePlay(audio);
     } else if (currentTrackRef.current) {
-      audio.play().catch(console.error);
+      safePlay(audio);
     }
-  }, []);
+  }, [safePlay]);
 
   const pause = useCallback(() => {
-    audioRef.current?.pause();
-  }, []);
+    if (audioRef.current) {
+      safePause(audioRef.current);
+    }
+  }, [safePause]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     if (audio.paused) {
-      audio.play().catch(console.error);
+      safePlay(audio);
     } else {
-      audio.pause();
+      safePause(audio);
     }
-  }, []);
+  }, [safePlay, safePause]);
 
   const next = useCallback(() => {
     playNext();
@@ -240,9 +273,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setCurrentTrack(prevTrack);
       setProgress(0);
       audio.src = prevTrack.audioUrl;
-      audio.play().catch(console.error);
+      safePlay(audio);
     }
-  }, []);
+  }, [safePlay]);
 
   const seek = useCallback((time: number) => {
     if (audioRef.current) {
@@ -266,6 +299,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const setQueue = useCallback((tracks: Track[]) => {
     setQueueState(tracks);
   }, []);
+
 
   return (
     <PlayerContext.Provider

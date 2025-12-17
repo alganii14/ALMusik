@@ -13,7 +13,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <AuthProvider>
         <SongsProvider>
           <FavoritesProvider>
-            <PlayerProvider>{children}</PlayerProvider>
+            <PlayerProvider>
+              {children}
+            </PlayerProvider>
           </FavoritesProvider>
         </SongsProvider>
       </AuthProvider>

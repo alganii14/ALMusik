@@ -1,10 +1,36 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
-import YouTube, { YouTubeEvent } from "react-youtube";
+import { useEffect, useCallback, useRef, useState, Component, ReactNode } from "react";
 import { usePlayer } from "@/context/player-context";
 
-export default function YouTubePlayerComponent() {
+// Error Boundary to catch YouTube player errors
+class YouTubeErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("YouTube Player Error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
+// Inner component that uses YouTube
+function YouTubePlayerInner() {
   const {
     currentTrack,
     isPlaying,
@@ -14,7 +40,6 @@ export default function YouTubePlayerComponent() {
     volume,
     isRepeat,
     next,
-    seek,
     progress,
   } = usePlayer();
 
@@ -22,6 +47,16 @@ export default function YouTubePlayerComponent() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isRepeatRef = useRef(isRepeat);
   const seekingRef = useRef(false);
+  const [YouTube, setYouTube] = useState<typeof import("react-youtube").default | null>(null);
+
+  // Dynamically import react-youtube only on client
+  useEffect(() => {
+    import("react-youtube").then((mod) => {
+      setYouTube(() => mod.default);
+    }).catch((err) => {
+      console.error("Failed to load react-youtube:", err);
+    });
+  }, []);
 
   useEffect(() => {
     isRepeatRef.current = isRepeat;
@@ -29,7 +64,7 @@ export default function YouTubePlayerComponent() {
 
   // Handle play/pause from context
   useEffect(() => {
-    if (!playerRef.current) return;
+    if (!playerRef.current || !currentTrack?.youtubeId) return;
 
     try {
       if (isPlaying) {
@@ -40,32 +75,36 @@ export default function YouTubePlayerComponent() {
     } catch (e) {
       console.error("Play/pause error:", e);
     }
-  }, [isPlaying]);
+  }, [isPlaying, currentTrack?.youtubeId]);
 
-  // Handle seek from context
+  // Handle seek from context - only for YouTube tracks
   useEffect(() => {
-    if (!playerRef.current || seekingRef.current) return;
+    if (!playerRef.current || seekingRef.current || !currentTrack?.youtubeId) return;
 
-    const currentTime = playerRef.current.getCurrentTime?.() || 0;
-    if (Math.abs(currentTime - progress) > 2) {
-      seekingRef.current = true;
-      playerRef.current.seekTo(progress, true);
-      setTimeout(() => {
-        seekingRef.current = false;
-      }, 500);
+    try {
+      const currentTime = playerRef.current.getCurrentTime?.() || 0;
+      if (Math.abs(currentTime - progress) > 2) {
+        seekingRef.current = true;
+        playerRef.current.seekTo(progress, true);
+        setTimeout(() => {
+          seekingRef.current = false;
+        }, 500);
+      }
+    } catch {
+      // Ignore seek errors
     }
-  }, [progress]);
+  }, [progress, currentTrack?.youtubeId]);
 
   // Handle volume
   useEffect(() => {
-    if (playerRef.current) {
+    if (playerRef.current && currentTrack?.youtubeId) {
       try {
         playerRef.current.setVolume(volume);
       } catch {
         // Ignore
       }
     }
-  }, [volume]);
+  }, [volume, currentTrack?.youtubeId]);
 
   const startProgressTracking = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -92,26 +131,34 @@ export default function YouTubePlayerComponent() {
   }, []);
 
   const onReady = useCallback(
-    (event: YouTubeEvent) => {
+    (event: { target: YT.Player }) => {
       const player = event.target;
       playerRef.current = player;
       console.log("YouTube Player Ready for:", currentTrack?.title);
-      player.setVolume(volume);
-      player.playVideo();
+      try {
+        player.setVolume(volume);
+        player.playVideo();
+      } catch (e) {
+        console.error("onReady error:", e);
+      }
     },
     [volume, currentTrack?.title]
   );
 
   const onStateChange = useCallback(
-    (event: YouTubeEvent) => {
+    (event: { data: number; target: YT.Player }) => {
       const state = event.data;
       const player = event.target;
 
       if (state === 1) {
         // PLAYING
         setIsPlaying(true);
-        const dur = player.getDuration();
-        if (dur > 0) setDuration(dur);
+        try {
+          const dur = player.getDuration();
+          if (dur > 0) setDuration(dur);
+        } catch {
+          // Ignore
+        }
         startProgressTracking();
       } else if (state === 2) {
         // PAUSED
@@ -122,8 +169,12 @@ export default function YouTubePlayerComponent() {
         setIsPlaying(false);
         stopProgressTracking();
         if (isRepeatRef.current) {
-          player.seekTo(0, true);
-          player.playVideo();
+          try {
+            player.seekTo(0, true);
+            player.playVideo();
+          } catch {
+            // Ignore
+          }
         } else {
           next();
         }
@@ -133,7 +184,7 @@ export default function YouTubePlayerComponent() {
   );
 
   const onError = useCallback(
-    (event: YouTubeEvent) => {
+    (event: { data: number }) => {
       console.error("YouTube Error:", event.data);
       stopProgressTracking();
       // Skip to next on error
@@ -142,13 +193,24 @@ export default function YouTubePlayerComponent() {
     [next, stopProgressTracking]
   );
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopProgressTracking();
+      playerRef.current = null;
     };
   }, [stopProgressTracking]);
 
-  if (!currentTrack?.youtubeId) {
+  // Clear player ref when track changes to non-YouTube
+  useEffect(() => {
+    if (!currentTrack?.youtubeId) {
+      playerRef.current = null;
+      stopProgressTracking();
+    }
+  }, [currentTrack?.youtubeId, stopProgressTracking]);
+
+  // Don't render if no YouTube track or YouTube component not loaded
+  if (!currentTrack?.youtubeId || !YouTube) {
     return null;
   }
 
@@ -156,13 +218,13 @@ export default function YouTubePlayerComponent() {
     height: "60",
     width: "80",
     playerVars: {
-      autoplay: 1,
-      controls: 0,
-      disablekb: 1,
-      fs: 0,
-      modestbranding: 1,
-      rel: 0,
-      playsinline: 1,
+      autoplay: 1 as const,
+      controls: 0 as const,
+      disablekb: 1 as const,
+      fs: 0 as const,
+      modestbranding: 1 as const,
+      rel: 0 as const,
+      playsinline: 1 as const,
     },
   };
 
@@ -189,5 +251,13 @@ export default function YouTubePlayerComponent() {
         onError={onError}
       />
     </div>
+  );
+}
+
+export default function YouTubePlayerComponent() {
+  return (
+    <YouTubeErrorBoundary>
+      <YouTubePlayerInner />
+    </YouTubeErrorBoundary>
   );
 }

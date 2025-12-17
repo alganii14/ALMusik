@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Upload, Trash2, Music, ArrowLeft, Pencil, X, Youtube, Loader2 } from "lucide-react";
+import { Upload, Trash2, Music, ArrowLeft, Pencil, X, Loader2, Youtube } from "lucide-react";
 
 interface Song {
   id: string;
@@ -20,6 +20,7 @@ interface YouTubeInfo {
   title: string;
   artist: string;
   thumbnail: string;
+  thumbnailFallback?: string;
   duration: number;
   originalTitle: string;
   channelName: string;
@@ -71,7 +72,6 @@ export default function AdminPage() {
     const file = e.target.files?.[0];
     if (file) {
       setAudioFile(file);
-      // Get duration
       const audio = new Audio();
       audio.src = URL.createObjectURL(file);
       audio.onloadedmetadata = () => {
@@ -251,27 +251,30 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: youtubeUrl,
+          videoId: ytInfo.videoId,
           title: ytTitle,
           artist: ytArtist,
           thumbnail: ytInfo.thumbnail,
+          thumbnailFallback: ytInfo.thumbnailFallback,
+          duration: ytInfo.duration,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert("Lagu berhasil ditambahkan!");
+        alert(data.message || "Lagu berhasil ditambahkan!");
         setYoutubeUrl("");
         setYtInfo(null);
         setYtTitle("");
         setYtArtist("");
         fetchSongs();
       } else {
-        alert(data.error || "Gagal mendownload lagu");
+        alert(data.error || "Gagal menambahkan lagu");
       }
     } catch (error) {
-      console.error("YouTube download error:", error);
-      alert("Gagal mendownload lagu");
+      console.error("YouTube add error:", error);
+      alert("Gagal menambahkan lagu");
     } finally {
       setDownloadingYt(false);
     }
@@ -363,77 +366,77 @@ export default function AdminPage() {
 
           {/* Manual Upload Tab */}
           {activeTab === "upload" && (
-            <form onSubmit={handleUpload} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#b3b3b3] mb-1">Judul Lagu *</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 focus:outline-none focus:border-[#1DB954]"
-                    placeholder="Masukkan judul lagu"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[#b3b3b3] mb-1">Artis *</label>
-                  <input
-                    type="text"
-                    value={artist}
-                    onChange={(e) => setArtist(e.target.value)}
-                    className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 focus:outline-none focus:border-[#1DB954]"
-                    placeholder="Masukkan nama artis"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#b3b3b3] mb-1">File Audio (MP3) *</label>
-                  <input
-                    ref={audioInputRef}
-                    type="file"
-                    accept="audio/*"
-                    onChange={handleAudioChange}
-                    className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#1DB954] file:text-black file:font-semibold file:cursor-pointer"
-                    required
-                  />
-                  {audioDuration > 0 && (
-                    <p className="text-xs text-[#b3b3b3] mt-1">Durasi: {formatDuration(audioDuration)}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm text-[#b3b3b3] mb-1">Cover Image (opsional)</label>
-                  <input
-                    ref={coverInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
-                    className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#404040] file:text-white file:cursor-pointer"
-                  />
-                </div>
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-[#b3b3b3] mb-1">Judul Lagu *</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 focus:outline-none focus:border-[#1DB954]"
+                  placeholder="Masukkan judul lagu"
+                  required
+                />
               </div>
               <div>
-                <label className="block text-sm text-[#b3b3b3] mb-1">Lirik (opsional)</label>
-                <textarea
-                  value={lyrics}
-                  onChange={(e) => setLyrics(e.target.value)}
-                  className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 focus:outline-none focus:border-[#1DB954] min-h-[120px] resize-y"
-                  placeholder="Format LRC untuk lirik sync:&#10;[00:15.00]Jadi waktu itu dingin&#10;[00:18.50]Kuberi kau hangat&#10;&#10;Atau lirik biasa tanpa timestamp"
+                <label className="block text-sm text-[#b3b3b3] mb-1">Artis *</label>
+                <input
+                  type="text"
+                  value={artist}
+                  onChange={(e) => setArtist(e.target.value)}
+                  className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 focus:outline-none focus:border-[#1DB954]"
+                  placeholder="Masukkan nama artis"
+                  required
                 />
-                <p className="text-xs text-[#b3b3b3] mt-1">
-                  Gunakan format [mm:ss.xx]teks untuk lirik yang berjalan sync dengan lagu
-                </p>
               </div>
-              <button
-                type="submit"
-                disabled={uploading}
-                className="bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#404040] text-black font-semibold px-6 py-2 rounded-full transition-colors"
-              >
-                {uploading ? "Uploading..." : "Upload Lagu"}
-              </button>
-            </form>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-[#b3b3b3] mb-1">File Audio (MP3) *</label>
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleAudioChange}
+                  className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#1DB954] file:text-black file:font-semibold file:cursor-pointer"
+                  required
+                />
+                {audioDuration > 0 && (
+                  <p className="text-xs text-[#b3b3b3] mt-1">Durasi: {formatDuration(audioDuration)}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm text-[#b3b3b3] mb-1">Cover Image (opsional)</label>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
+                  className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#404040] file:text-white file:cursor-pointer"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-[#b3b3b3] mb-1">Lirik (opsional)</label>
+              <textarea
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                className="w-full bg-[#282828] border border-[#404040] rounded px-3 py-2 focus:outline-none focus:border-[#1DB954] min-h-[120px] resize-y"
+                placeholder="Format LRC untuk lirik sync:&#10;[00:15.00]Jadi waktu itu dingin&#10;[00:18.50]Kuberi kau hangat&#10;&#10;Atau lirik biasa tanpa timestamp"
+              />
+              <p className="text-xs text-[#b3b3b3] mt-1">
+                Gunakan format [mm:ss.xx]teks untuk lirik yang berjalan sync dengan lagu
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={uploading}
+              className="bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#404040] text-black font-semibold px-6 py-2 rounded-full transition-colors"
+            >
+              {uploading ? "Uploading..." : "Upload Lagu"}
+            </button>
+          </form>
           )}
 
           {/* YouTube Import Tab */}
@@ -522,7 +525,7 @@ export default function AdminPage() {
                     ) : (
                       <>
                         <Music size={20} />
-                        Tambahkan ke Library
+                        Download & Tambahkan ke Library
                       </>
                     )}
                   </button>
@@ -530,7 +533,7 @@ export default function AdminPage() {
               )}
 
               <p className="text-xs text-[#b3b3b3]">
-                Paste link YouTube, lalu klik Cari untuk mendapatkan info lagu. Kamu bisa edit judul dan artis sebelum menambahkan.
+                Paste link YouTube, lalu klik Cari untuk mendapatkan info lagu. Audio akan didownload sebagai MP3.
               </p>
             </div>
           )}

@@ -51,6 +51,9 @@ export default function AdminPage() {
   const [fetchingYt, setFetchingYt] = useState(false);
   const [downloadingYt, setDownloadingYt] = useState(false);
   const [activeTab, setActiveTab] = useState<"upload" | "youtube">("upload");
+  
+  // Check if running locally (YouTube download only works locally)
+  const isLocal = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   useEffect(() => {
     fetchSongs();
@@ -351,17 +354,19 @@ export default function AdminPage() {
               <Upload size={18} />
               Upload Manual
             </button>
-            <button
-              onClick={() => setActiveTab("youtube")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors ${
-                activeTab === "youtube"
-                  ? "bg-[#FF0000] text-white"
-                  : "bg-[#282828] text-white hover:bg-[#333]"
-              }`}
-            >
-              <Youtube size={18} />
-              Import dari YouTube
-            </button>
+            {isLocal && (
+              <button
+                onClick={() => setActiveTab("youtube")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-colors ${
+                  activeTab === "youtube"
+                    ? "bg-[#FF0000] text-white"
+                    : "bg-[#282828] text-white hover:bg-[#333]"
+                }`}
+              >
+                <Youtube size={18} />
+                Import dari YouTube
+              </button>
+            )}
           </div>
 
           {/* Manual Upload Tab */}
@@ -439,8 +444,8 @@ export default function AdminPage() {
           </form>
           )}
 
-          {/* YouTube Import Tab */}
-          {activeTab === "youtube" && (
+          {/* YouTube Import Tab - Only available locally */}
+          {activeTab === "youtube" && isLocal && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-[#b3b3b3] mb-1">URL YouTube</label>

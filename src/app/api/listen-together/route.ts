@@ -112,5 +112,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(session);
   }
 
+  // End session completely (host only) - kicks everyone out
+  if (action === "end") {
+    const session = await sessionStorage.get(sessionId);
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+
+    // Only host can end session
+    if (session.hostId !== userId) {
+      return NextResponse.json({ error: "Only host can end session" }, { status: 403 });
+    }
+
+    await sessionStorage.delete(sessionId);
+    return NextResponse.json({ message: "Session ended" });
+  }
+
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }

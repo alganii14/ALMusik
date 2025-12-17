@@ -269,6 +269,7 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
 
     const sessionId = session.id;
     const userId = user.id;
+    const wasHost = isHostRef.current;
     
     // Clear local state first
     setSession(null);
@@ -279,7 +280,8 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "leave",
+          // Host uses "end" to completely end session, others use "leave"
+          action: wasHost ? "end" : "leave",
           sessionId,
           userId,
         }),

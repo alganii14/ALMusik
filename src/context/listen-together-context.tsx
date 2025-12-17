@@ -50,6 +50,23 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Refs for sync to avoid stale closures
+  const currentTrackRef = useRef(currentTrack);
+  const isPlayingRef = useRef(isPlaying);
+  const progressRef = useRef(progress);
+
+  useEffect(() => {
+    currentTrackRef.current = currentTrack;
+  }, [currentTrack]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
   // Sync state from server (for listeners - full sync including playback)
   const syncFromServer = useCallback(async () => {
     if (!session) return;
@@ -88,28 +105,31 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
 
       // Only sync playback for non-host (listeners)
       if (!isHostRef.current && data.currentTrack) {
-        const trackChanged = !currentTrack || currentTrack.id !== data.currentTrack.id;
+        const localTrack = currentTrackRef.current;
+        const trackChanged = !localTrack || localTrack.id !== data.currentTrack.id;
+        
         if (trackChanged) {
+          console.log('[Sync] Track changed, playing:', data.currentTrack.title);
           play(data.currentTrack as Track);
-        }
+        } else {
+          // Same track - sync play/pause state
+          if (data.isPlaying && !isPlayingRef.current) {
+            play();
+          } else if (!data.isPlaying && isPlayingRef.current) {
+            pause();
+          }
 
-        // Sync play/pause state
-        if (data.isPlaying && !isPlaying) {
-          play();
-        } else if (!data.isPlaying && isPlaying) {
-          pause();
-        }
-
-        // Sync time if difference is too large
-        const timeDiff = Math.abs(progress - data.currentTime);
-        if (timeDiff > TIME_SYNC_THRESHOLD) {
-          seek(data.currentTime);
+          // Sync time if difference is too large
+          const timeDiff = Math.abs(progressRef.current - data.currentTime);
+          if (timeDiff > TIME_SYNC_THRESHOLD) {
+            seek(data.currentTime);
+          }
         }
       }
     } catch (err) {
       console.error("Sync error:", err);
     }
-  }, [session, currentTrack, isPlaying, progress, play, pause, seek, user?.id]);
+  }, [session, play, pause, seek, user?.id]);
 
   // Start sync polling for all session members (host polls for participants, listeners poll for everything)
   useEffect(() => {

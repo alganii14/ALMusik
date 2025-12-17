@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   sessionStorage.cleanup();
 
   if (sessionId) {
-    const session = sessionStorage.get(sessionId);
+    const session = await sessionStorage.get(sessionId);
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (userId) {
-    const userSessions = sessionStorage.getAll().filter(
+    const allSessions = await sessionStorage.getAll();
+    const userSessions = allSessions.filter(
       (s) => s.hostId === userId || s.participants.some((p) => p.id === userId)
     );
     return NextResponse.json(userSessions);
@@ -56,12 +57,12 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    sessionStorage.set(newSessionId, newSession);
+    await sessionStorage.set(newSessionId, newSession);
     return NextResponse.json(newSession);
   }
 
   if (action === "join") {
-    const session = sessionStorage.get(sessionId);
+    const session = await sessionStorage.get(sessionId);
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -80,11 +81,12 @@ export async function POST(request: NextRequest) {
       session.updatedAt = Date.now();
     }
 
+    await sessionStorage.set(sessionId, session);
     return NextResponse.json(session);
   }
 
   if (action === "leave") {
-    const session = sessionStorage.get(sessionId);
+    const session = await sessionStorage.get(sessionId);
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -98,10 +100,13 @@ export async function POST(request: NextRequest) {
         session.hostId = session.participants[0].id;
         session.hostName = session.participants[0].name;
         session.participants[0].isHost = true;
+        await sessionStorage.set(sessionId, session);
       } else {
-        sessionStorage.delete(sessionId);
+        await sessionStorage.delete(sessionId);
         return NextResponse.json({ message: "Session ended" });
       }
+    } else {
+      await sessionStorage.set(sessionId, session);
     }
 
     return NextResponse.json(session);

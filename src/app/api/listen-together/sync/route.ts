@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { sessionId, userId, action, payload } = body;
 
-  const session = sessionStorage.get(sessionId);
+  const session = await sessionStorage.get(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   session.updatedAt = Date.now();
+  await sessionStorage.set(sessionId, session);
   return NextResponse.json(session);
 }
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
 
-  const session = sessionStorage.get(sessionId);
+  const session = await sessionStorage.get(sessionId);
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }

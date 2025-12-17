@@ -201,6 +201,7 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
             imageUrl: currentTrack.imageUrl,
             audioUrl: currentTrack.audioUrl,
             duration: currentTrack.duration,
+            lyrics: currentTrack.lyrics, // Include lyrics for sync
           }
         },
       }),

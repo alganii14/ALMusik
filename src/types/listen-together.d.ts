@@ -9,6 +9,7 @@ export interface ListenTogetherSession {
     imageUrl: string;
     audioUrl: string;
     duration: number;
+    lyrics?: string;
   } | null;
   isPlaying: boolean;
   currentTime: number;

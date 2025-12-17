@@ -103,13 +103,21 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
       // Update participants for everyone (host and listeners)
       setSession(prev => prev ? { ...prev, participants: data.participants } : null);
 
+      // Check if current user is the host by comparing with session hostId
+      // Use the session state directly, not the ref which might be stale
+      const currentUserIsHost = session.hostId === user?.id;
+      
+      console.log('[Sync] Current user is host:', currentUserIsHost, 'Track from server:', data.currentTrack?.title);
+
       // Only sync playback for non-host (listeners)
-      if (!isHostRef.current && data.currentTrack) {
+      if (!currentUserIsHost && data.currentTrack) {
         const localTrack = currentTrackRef.current;
         const trackChanged = !localTrack || localTrack.id !== data.currentTrack.id;
         
+        console.log('[Sync] Local track:', localTrack?.title, 'Server track:', data.currentTrack.title, 'Changed:', trackChanged);
+        
         if (trackChanged) {
-          console.log('[Sync] Track changed, playing:', data.currentTrack.title);
+          console.log('[Sync] Playing new track:', data.currentTrack.title);
           play(data.currentTrack as Track);
         } else {
           // Same track - sync play/pause state

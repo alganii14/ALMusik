@@ -4,8 +4,10 @@ import { kv } from "@vercel/kv";
 const SESSION_PREFIX = "listen-together:";
 const SESSION_TTL = 2 * 60 * 60; // 2 hours in seconds
 
-// Check if KV is available (has env vars configured)
-const isKVAvailable = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+// Check if KV is available (has env vars configured) - check each time
+function isKVAvailable(): boolean {
+  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
 
 // Fallback in-memory storage for development
 declare global {
@@ -22,44 +24,51 @@ function getSessionsMap(): Map<string, ListenTogetherSession> {
 
 class SessionStorage {
   async get(id: string): Promise<ListenTogetherSession | null> {
-    if (isKVAvailable) {
+    if (isKVAvailable()) {
       try {
-        return await kv.get<ListenTogetherSession>(`${SESSION_PREFIX}${id}`);
+        const result = await kv.get<ListenTogetherSession>(`${SESSION_PREFIX}${id}`);
+        console.log(`[KV] GET ${id}:`, result ? 'found' : 'not found');
+        return result;
       } catch (error) {
         console.error("KV get error:", error);
         return null;
       }
     }
+    console.log(`[Memory] GET ${id}`);
     return getSessionsMap().get(id) || null;
   }
 
   async set(id: string, session: ListenTogetherSession): Promise<void> {
-    if (isKVAvailable) {
+    if (isKVAvailable()) {
       try {
         await kv.set(`${SESSION_PREFIX}${id}`, session, { ex: SESSION_TTL });
+        console.log(`[KV] SET ${id}: ${session.participants.length} participants`);
       } catch (error) {
         console.error("KV set error:", error);
       }
     } else {
+      console.log(`[Memory] SET ${id}`);
       getSessionsMap().set(id, session);
     }
   }
 
   async delete(id: string): Promise<boolean> {
-    if (isKVAvailable) {
+    if (isKVAvailable()) {
       try {
         await kv.del(`${SESSION_PREFIX}${id}`);
+        console.log(`[KV] DELETE ${id}`);
         return true;
       } catch (error) {
         console.error("KV delete error:", error);
         return false;
       }
     }
+    console.log(`[Memory] DELETE ${id}`);
     return getSessionsMap().delete(id);
   }
 
   async getAll(): Promise<ListenTogetherSession[]> {
-    if (isKVAvailable) {
+    if (isKVAvailable()) {
       try {
         const keys = await kv.keys(`${SESSION_PREFIX}*`);
         if (keys.length === 0) return [];
@@ -77,7 +86,7 @@ class SessionStorage {
 
   // Cleanup is handled by TTL in KV, but keep for in-memory fallback
   cleanup(): void {
-    if (!isKVAvailable) {
+    if (!isKVAvailable()) {
       const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
       const sessions = getSessionsMap();
       for (const [id, session] of sessions.entries()) {

@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { useFavorites } from "@/context/favorites-context";
+import { ListenTogetherModal } from "@/components/listen-together-modal";
+import { useListenTogether } from "@/context/listen-together-context";
 
 // Random gradient backgrounds for lyrics
 const LYRICS_GRADIENTS = [
@@ -90,6 +92,7 @@ export default function PlayerControls() {
   } = usePlayer();
 
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isInSession, isHost, syncPlayState } = useListenTogether();
   const isLiked = currentTrack ? isFavorite(currentTrack.id) : false;
 
   const [isHoveringSeek, setIsHoveringSeek] = useState(false);
@@ -190,7 +193,20 @@ export default function PlayerControls() {
   const handleSeekClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
-    seek(percent * duration);
+    const newTime = percent * duration;
+    seek(newTime);
+    // Sync to session if host
+    if (isInSession && isHost) {
+      syncPlayState("seek", { time: newTime });
+    }
+  };
+
+  // Wrapped togglePlay with session sync
+  const handleTogglePlay = () => {
+    togglePlay();
+    if (isInSession && isHost) {
+      syncPlayState(isPlaying ? "pause" : "play", { time: progress });
+    }
   };
 
   const handleVolumeChange = (e: React.MouseEvent<HTMLDivElement> | MouseEvent) => {
@@ -349,7 +365,7 @@ export default function PlayerControls() {
                   <SkipBack size={20} className="sm:w-6 sm:h-6" fill="currentColor" />
                 </button>
                 <button 
-                  onClick={togglePlay}
+                  onClick={handleTogglePlay}
                   className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center text-black hover:scale-105 transition-transform"
                 >
                   {isPlaying ? <Pause size={20} className="sm:w-6 sm:h-6" fill="currentColor" /> : <Play size={20} className="sm:w-6 sm:h-6 ml-0.5" fill="currentColor" />}
@@ -432,7 +448,7 @@ export default function PlayerControls() {
                 <SkipBack size={24} className="sm:w-7 sm:h-7" fill="currentColor" />
               </button>
               <button 
-                onClick={togglePlay}
+                onClick={handleTogglePlay}
                 className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center text-black hover:scale-105 transition-transform"
               >
                 {isPlaying ? <Pause size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8" fill="currentColor" /> : <Play size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8 ml-0.5 sm:ml-1" fill="currentColor" />}
@@ -485,9 +501,17 @@ export default function PlayerControls() {
           )}
         </div>
         <div className="flex flex-col justify-center overflow-hidden gap-0.5 min-w-0 flex-1 md:flex-none">
-          <a href="#" className="text-white text-xs sm:text-[13px] md:text-[14px] font-normal hover:underline truncate leading-tight">
-            {currentTrack?.title || "No track selected"}
-          </a>
+          <div className="flex items-center gap-2">
+            <a href="#" className="text-white text-xs sm:text-[13px] md:text-[14px] font-normal hover:underline truncate leading-tight">
+              {currentTrack?.title || "No track selected"}
+            </a>
+            {isInSession && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] bg-green-600/20 text-green-500 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                LIVE
+              </span>
+            )}
+          </div>
           <a href="#" className="text-[10px] sm:text-[11px] text-[#b3b3b3] hover:text-white hover:underline truncate leading-tight">
             {currentTrack?.artist || "Select a song to play"}
           </a>
@@ -530,7 +554,7 @@ export default function PlayerControls() {
           </button>
 
           <button
-            onClick={togglePlay}
+            onClick={handleTogglePlay}
             className="w-7 h-7 sm:w-8 sm:h-8 bg-white rounded-full flex items-center justify-center text-black hover:scale-105 transition-transform active:scale-95 active:bg-[#f0f0f0]"
             aria-label={isPlaying ? "Pause" : "Play"}
           >
@@ -586,7 +610,7 @@ export default function PlayerControls() {
           <SkipBack size={16} fill="currentColor" />
         </button>
         <button
-          onClick={togglePlay}
+          onClick={handleTogglePlay}
           className="w-9 h-9 bg-white rounded-full flex items-center justify-center text-black hover:scale-105 transition-transform active:scale-95"
           aria-label={isPlaying ? "Pause" : "Play"}
         >
@@ -624,6 +648,9 @@ export default function PlayerControls() {
         <button className="w-7 h-7 sm:w-8 sm:h-8 hidden lg:flex items-center justify-center text-[#b3b3b3] hover:text-white transition-colors" aria-label="Connect to a device" title="Connect to a device">
           <MonitorSpeaker size={16} strokeWidth={2} />
         </button>
+
+        {/* Listen Together Button */}
+        <ListenTogetherModal />
 
         <div className="hidden md:flex items-center gap-2 w-[100px] lg:w-[120px]">
           <button

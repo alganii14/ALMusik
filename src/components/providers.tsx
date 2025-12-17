@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/auth-context";
 import { PlayerProvider } from "@/context/player-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import { SongsProvider } from "@/context/songs-context";
+import { ListenTogetherProvider } from "@/context/listen-together-context";
 import { ReactNode } from "react";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -14,7 +15,9 @@ export function Providers({ children }: { children: ReactNode }) {
         <SongsProvider>
           <FavoritesProvider>
             <PlayerProvider>
-              {children}
+              <ListenTogetherProvider>
+                {children}
+              </ListenTogetherProvider>
             </PlayerProvider>
           </FavoritesProvider>
         </SongsProvider>

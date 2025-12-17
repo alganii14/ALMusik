@@ -258,21 +258,35 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
   const leaveSession = useCallback(async () => {
     if (!session || !user) return;
 
+    // Stop polling immediately
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+
+    const sessionId = session.id;
+    const userId = user.id;
+    
+    // Clear local state first
+    setSession(null);
+    setError(null);
+
     try {
-      await fetch("/api/listen-together", {
+      const res = await fetch("/api/listen-together", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "leave",
-          sessionId: session.id,
-          userId: user.id,
+          sessionId,
+          userId,
         }),
       });
+      
+      if (!res.ok) {
+        console.error("Leave session failed:", await res.text());
+      }
     } catch (err) {
       console.error("Leave session error:", err);
-    } finally {
-      setSession(null);
-      setError(null);
     }
   }, [session, user]);
 

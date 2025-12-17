@@ -176,6 +176,8 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
     if (currentTrackIdRef.current === currentTrack.id) return;
     currentTrackIdRef.current = currentTrack.id;
 
+    console.log('[Host] Syncing track change:', currentTrack.title);
+    
     fetch("/api/listen-together/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -194,7 +196,15 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
           }
         },
       }),
-    }).catch(console.error);
+    })
+    .then(res => {
+      if (res.ok) {
+        console.log('[Host] Track synced successfully');
+      } else {
+        console.error('[Host] Track sync failed:', res.status);
+      }
+    })
+    .catch(console.error);
   }, [currentTrack, session, isHost, user?.id]);
 
   const createSession = useCallback(async (): Promise<string | null> => {
@@ -265,10 +275,16 @@ export function ListenTogetherProvider({ children }: { children: ReactNode }) {
 
       // Sync to current track if exists
       if (joinedSession.currentTrack) {
+        console.log('[Join] Playing track from session:', joinedSession.currentTrack.title);
         play(joinedSession.currentTrack as Track);
         if (joinedSession.currentTime > 0) {
           setTimeout(() => seek(joinedSession.currentTime), 500);
         }
+        if (joinedSession.isPlaying) {
+          setTimeout(() => play(), 600);
+        }
+      } else {
+        console.log('[Join] No track in session yet');
       }
 
       return true;

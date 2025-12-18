@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Music, X, Heart } from "lucide-react";
+import { Plus, Music, X, Heart, Users, UserPlus } from "lucide-react";
 import { useFavorites } from "@/context/favorites-context";
 import { useAuth } from "@/context/auth-context";
 
@@ -18,28 +18,45 @@ interface Playlist {
   createdAt: string;
 }
 
+interface CollaborativePlaylist {
+  id: string;
+  name: string;
+  description: string;
+  cover: string;
+  ownerId: string;
+  ownerName: string;
+  collaborators: { userId: string; userName: string }[];
+  songs: { id: string }[];
+  inviteCode: string;
+}
+
 export default function SidebarLibrary() {
   const router = useRouter();
   const { user } = useAuth();
   const { favorites } = useFavorites();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [collabPlaylists, setCollabPlaylists] = useState<CollaborativePlaylist[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateOptions, setShowCreateOptions] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [isCollaborative, setIsCollaborative] = useState(false);
 
   function handleCreateClick() {
     if (!user) {
       router.push("/login");
       return;
     }
-    setShowCreateModal(true);
+    setShowCreateOptions(true);
   }
 
   useEffect(() => {
     if (user) {
       fetchPlaylists();
+      fetchCollabPlaylists();
     } else {
       setPlaylists([]);
+      setCollabPlaylists([]);
     }
   }, [user]);
 
@@ -54,21 +71,47 @@ export default function SidebarLibrary() {
     }
   }
 
+  async function fetchCollabPlaylists() {
+    if (!user) return;
+    try {
+      const response = await fetch(`/api/collaborative-playlist?userId=${encodeURIComponent(user.id)}`);
+      const data = await response.json();
+      setCollabPlaylists(data.playlists || []);
+    } catch (error) {
+      console.error("Failed to fetch collaborative playlists:", error);
+    }
+  }
+
   async function handleCreatePlaylist() {
     if (!newPlaylistName.trim() || !user) return;
 
     setCreating(true);
     try {
-      const response = await fetch("/api/playlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newPlaylistName, userId: user.id }),
-      });
-
-      if (response.ok) {
-        setNewPlaylistName("");
-        setShowCreateModal(false);
-        fetchPlaylists();
+      if (isCollaborative) {
+        const response = await fetch("/api/collaborative-playlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newPlaylistName, userId: user.id, userName: user.name }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setNewPlaylistName("");
+          setShowCreateModal(false);
+          setIsCollaborative(false);
+          fetchCollabPlaylists();
+          router.push(`/collaborative-playlist/${data.playlist.id}`);
+        }
+      } else {
+        const response = await fetch("/api/playlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newPlaylistName, userId: user.id }),
+        });
+        if (response.ok) {
+          setNewPlaylistName("");
+          setShowCreateModal(false);
+          fetchPlaylists();
+        }
       }
     } catch (error) {
       console.error("Failed to create playlist:", error);
@@ -146,7 +189,7 @@ export default function SidebarLibrary() {
               Login
             </button>
           </section>
-        ) : playlists.length === 0 ? (
+        ) : playlists.length === 0 && collabPlaylists.length === 0 ? (
           <section className="bg-[#242424] rounded-[8px] p-5 my-2 flex flex-col items-start gap-y-2">
             <div className="flex flex-col gap-1">
               <span className="text-white font-bold text-[16px] leading-[1.3]">
@@ -165,6 +208,32 @@ export default function SidebarLibrary() {
           </section>
         ) : (
           <div className="space-y-1 py-2">
+            {/* Collaborative Playlists */}
+            {collabPlaylists.map((playlist) => (
+              <Link
+                key={playlist.id}
+                href={`/collaborative-playlist/${playlist.id}`}
+                className="flex items-center gap-3 p-2 rounded-md hover:bg-[#1f1f1f] transition-colors group"
+              >
+                <div className="w-12 h-12 bg-[#282828] rounded flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                  {playlist.cover ? (
+                    <Image src={playlist.cover} alt={playlist.name} width={48} height={48} className="object-cover" unoptimized />
+                  ) : (
+                    <Music size={20} className="text-[#7f7f7f]" />
+                  )}
+                  <div className="absolute -bottom-1 -right-1 bg-[#1DB954] rounded-full p-0.5">
+                    <Users size={10} className="text-black" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium truncate">{playlist.name}</p>
+                  <p className="text-[#b3b3b3] text-xs truncate">
+                    Kolaboratif • {playlist.collaborators.length} orang • {playlist.songs.length} lagu
+                  </p>
+                </div>
+              </Link>
+            ))}
+            {/* Regular Playlists */}
             {playlists.map((playlist) => (
               <Link
                 key={playlist.id}
@@ -190,6 +259,66 @@ export default function SidebarLibrary() {
         )}
       </div>
 
+      {/* Create Options Modal */}
+      {showCreateOptions && typeof document !== "undefined" && createPortal(
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4"
+          style={{ zIndex: 9999 }}
+          onClick={(e) => e.target === e.currentTarget && setShowCreateOptions(false)}
+        >
+          <div 
+            className="bg-[#282828] rounded-xl w-full max-w-sm p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-white text-xl font-bold">Buat Playlist</h2>
+              <button onClick={() => setShowCreateOptions(false)} className="text-[#b3b3b3] hover:text-white p-1">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => { setShowCreateOptions(false); setIsCollaborative(false); setShowCreateModal(true); }}
+                className="w-full flex items-center gap-4 p-4 bg-[#3e3e3e] hover:bg-[#4e4e4e] rounded-lg transition-colors"
+              >
+                <div className="w-12 h-12 bg-[#1DB954]/20 rounded-full flex items-center justify-center">
+                  <Music size={24} className="text-[#1DB954]" />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-bold">Playlist Biasa</p>
+                  <p className="text-[#b3b3b3] text-sm">Hanya kamu yang bisa mengedit</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowCreateOptions(false); setIsCollaborative(true); setShowCreateModal(true); }}
+                className="w-full flex items-center gap-4 p-4 bg-[#3e3e3e] hover:bg-[#4e4e4e] rounded-lg transition-colors"
+              >
+                <div className="w-12 h-12 bg-[#1DB954]/20 rounded-full flex items-center justify-center">
+                  <Users size={24} className="text-[#1DB954]" />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-bold">Playlist Kolaboratif</p>
+                  <p className="text-[#b3b3b3] text-sm">Undang teman untuk mengedit bersama</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowCreateOptions(false); router.push("/collaborative-playlist/join"); }}
+                className="w-full flex items-center gap-4 p-4 bg-[#3e3e3e] hover:bg-[#4e4e4e] rounded-lg transition-colors"
+              >
+                <div className="w-12 h-12 bg-[#1DB954]/20 rounded-full flex items-center justify-center">
+                  <UserPlus size={24} className="text-[#1DB954]" />
+                </div>
+                <div className="text-left">
+                  <p className="text-white font-bold">Gabung Playlist</p>
+                  <p className="text-[#b3b3b3] text-sm">Masukkan kode undangan</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Create Playlist Modal - rendered via portal */}
       {showCreateModal && typeof document !== "undefined" && createPortal(
         <div 
@@ -202,21 +331,31 @@ export default function SidebarLibrary() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-white text-xl font-bold">Buat Playlist Baru</h2>
+              <h2 className="text-white text-xl font-bold">
+                {isCollaborative ? "Buat Playlist Kolaboratif" : "Buat Playlist Baru"}
+              </h2>
               <button 
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => { setShowCreateModal(false); setNewPlaylistName(""); }}
                 className="text-[#b3b3b3] hover:text-white p-1"
               >
                 <X size={24} />
               </button>
             </div>
+            {isCollaborative && (
+              <div className="bg-[#1DB954]/10 border border-[#1DB954]/30 rounded-lg p-3 mb-4 flex items-start gap-3">
+                <Users size={20} className="text-[#1DB954] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-[#b3b3b3]">
+                  Playlist kolaboratif memungkinkan kamu mengundang teman untuk menambah lagu bersama-sama.
+                </p>
+              </div>
+            )}
             <div className="mb-6">
               <label className="block text-sm text-[#b3b3b3] mb-2">Nama Playlist</label>
               <input
                 type="text"
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
-                placeholder="Playlist Saya"
+                placeholder={isCollaborative ? "Playlist Bersama" : "Playlist Saya"}
                 className="w-full bg-[#3e3e3e] text-white px-4 py-3 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1DB954] placeholder:text-[#727272]"
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && handleCreatePlaylist()}
@@ -224,10 +363,7 @@ export default function SidebarLibrary() {
             </div>
             <div className="flex justify-end gap-4">
               <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setNewPlaylistName("");
-                }}
+                onClick={() => { setShowCreateModal(false); setNewPlaylistName(""); }}
                 className="px-6 py-3 text-white font-bold hover:scale-105 transition-transform"
               >
                 Batal

@@ -6,23 +6,74 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Modern app icon - rounded square with gradient and music wave
 const SVG_ICON = `
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="100" fill="#1DB954"/>
-  <circle cx="256" cy="256" r="140" fill="#121212"/>
-  <circle cx="256" cy="256" r="50" fill="#1DB954"/>
-  <path d="M256 116C178.8 116 116 178.8 116 256s62.8 140 140 140 140-62.8 140-140S333.2 116 256 116zm0 240c-55.2 0-100-44.8-100-100s44.8-100 100-100 100 44.8 100 100-44.8 100-100 100z" fill="#1DB954"/>
-  <text x="256" y="280" font-family="Arial Black, Arial, sans-serif" font-size="80" font-weight="900" fill="white" text-anchor="middle">AL</text>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1DB954"/>
+      <stop offset="100%" style="stop-color:#169c46"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#e0e0e0"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle inner shadow/glow -->
+  <rect x="20" y="20" width="472" height="472" rx="100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2"/>
+  
+  <!-- Music wave bars -->
+  <g fill="rgba(255,255,255,0.15)">
+    <rect x="80" y="200" width="30" height="112" rx="15"/>
+    <rect x="130" y="160" width="30" height="192" rx="15"/>
+    <rect x="180" y="180" width="30" height="152" rx="15"/>
+  </g>
+  
+  <!-- AL Text - Bold and prominent -->
+  <text x="320" y="340" font-family="Arial Black, Helvetica, sans-serif" font-size="180" font-weight="900" fill="white" text-anchor="middle">AL</text>
+  
+  <!-- Small music note accent -->
+  <g fill="rgba(255,255,255,0.9)" transform="translate(400, 120)">
+    <ellipse cx="20" cy="50" rx="18" ry="14"/>
+    <rect x="34" y="0" width="6" height="50"/>
+    <path d="M40,0 Q60,-10 70,15 Q60,5 40,10 Z"/>
+  </g>
 </svg>
 `;
 
+// Maskable icon - more padding for safe area
 const SVG_MASKABLE = `
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" fill="#1DB954"/>
-  <circle cx="256" cy="256" r="120" fill="#121212"/>
-  <circle cx="256" cy="256" r="40" fill="#1DB954"/>
-  <path d="M256 136C189.7 136 136 189.7 136 256s53.7 120 120 120 120-53.7 120-120S322.3 136 256 136zm0 200c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80z" fill="#1DB954"/>
-  <text x="256" y="275" font-family="Arial Black, Arial, sans-serif" font-size="70" font-weight="900" fill="white" text-anchor="middle">AL</text>
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1DB954"/>
+      <stop offset="100%" style="stop-color:#169c46"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Full background for maskable -->
+  <rect width="512" height="512" fill="url(#bgGrad2)"/>
+  
+  <!-- Music wave bars - smaller for safe area -->
+  <g fill="rgba(255,255,255,0.15)">
+    <rect x="100" y="210" width="24" height="92" rx="12"/>
+    <rect x="140" y="180" width="24" height="152" rx="12"/>
+    <rect x="180" y="195" width="24" height="122" rx="12"/>
+  </g>
+  
+  <!-- AL Text - centered with padding -->
+  <text x="310" y="320" font-family="Arial Black, Helvetica, sans-serif" font-size="150" font-weight="900" fill="white" text-anchor="middle">AL</text>
+  
+  <!-- Small music note -->
+  <g fill="rgba(255,255,255,0.85)" transform="translate(380, 140) scale(0.8)">
+    <ellipse cx="20" cy="50" rx="18" ry="14"/>
+    <rect x="34" y="0" width="6" height="50"/>
+    <path d="M40,0 Q60,-10 70,15 Q60,5 40,10 Z"/>
+  </g>
 </svg>
 `;
 

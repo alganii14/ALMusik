@@ -28,7 +28,7 @@ export default function MobileSettingsPage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/mobile");
+    router.push("/mobile/login");
   };
 
   const settingsGroups = [
@@ -124,7 +124,7 @@ export default function MobileSettingsPage() {
         {/* Login Button */}
         {!user && (
           <Link
-            href="/login"
+            href="/mobile/login"
             className="block w-full text-center bg-white text-black font-bold py-3 rounded-full hover:scale-105 transition-transform"
           >
             Login

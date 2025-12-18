@@ -12,8 +12,10 @@ export default function MobileHome() {
   const { user } = useAuth();
   const { play, pause, isPlaying, currentTrack, setQueue, playSource } = usePlayer();
 
-  const recentSongs = songs.slice(0, 6);
   const trendingSongs = songs.slice(0, 10);
+
+  // Check if playing from LT12
+  const isPlayingFromLT12 = isPlaying && playSource === "lt12";
 
   const handlePlaySong = (song: typeof songs[0]) => {
     const track: Track = {
@@ -43,43 +45,66 @@ export default function MobileHome() {
     }
   };
 
+  const handlePlayAllLT12 = () => {
+    if (songs.length === 0) return;
+
+    const tracks: Track[] = songs.map((song) => ({
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      imageUrl: song.cover,
+      audioUrl: song.audioUrl,
+      duration: song.duration,
+      lyrics: song.lyrics,
+    }));
+    setQueue(tracks);
+
+    if (isPlayingFromLT12) {
+      pause();
+    } else {
+      play(tracks[0], "lt12");
+    }
+  };
+
   return (
-    <div className="px-4 py-2 space-y-6">
-      {/* Quick Access Grid */}
+    <div className="px-3 py-2 space-y-5">
+      {/* LT12 Quick Access - Like Spotify */}
       <div className="grid grid-cols-2 gap-2">
-        {recentSongs.map((song) => (
-          <button
-            key={song.id}
-            onClick={() => handlePlaySong(song)}
-            className="flex items-center bg-[#282828] hover:bg-[#3e3e3e] rounded overflow-hidden group transition-colors"
-          >
-            <div className="w-12 h-12 flex-shrink-0 relative">
-              {song.cover ? (
-                <Image
-                  src={song.cover}
-                  alt={song.title}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
+        {/* LT12 Card */}
+        <Link
+          href="/mobile/trending"
+          className="flex items-center bg-[#282828] hover:bg-[#3e3e3e] rounded overflow-hidden group transition-colors"
+        >
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-[10px]">LT12</span>
+          </div>
+          <span className="flex-1 px-2 text-white text-xs font-semibold truncate">LT12</span>
+          <div className={`pr-2 transition-opacity ${isPlayingFromLT12 ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <button 
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePlayAllLT12(); }}
+              className="w-7 h-7 bg-[#1ed760] rounded-full flex items-center justify-center shadow-lg"
+            >
+              {isPlayingFromLT12 ? (
+                <Pause size={14} fill="black" className="text-black" />
               ) : (
-                <div className="w-full h-full bg-[#181818] flex items-center justify-center">
-                  <Music size={16} className="text-[#7f7f7f]" />
-                </div>
+                <Play size={14} fill="black" className="text-black ml-0.5" />
               )}
-            </div>
-            <span className="flex-1 px-2 text-white text-xs font-semibold truncate text-left">
-              {song.title}
-            </span>
-            {currentTrack?.id === song.id && isPlaying && (
-              <div className="pr-2">
-                <div className="w-6 h-6 bg-[#1db954] rounded-full flex items-center justify-center">
-                  <Pause size={12} fill="black" className="text-black" />
-                </div>
-              </div>
-            )}
-          </button>
-        ))}
+            </button>
+          </div>
+        </Link>
+
+        {/* Liked Songs Card */}
+        <Link
+          href="/liked-songs"
+          className="flex items-center bg-[#282828] hover:bg-[#3e3e3e] rounded overflow-hidden group transition-colors"
+        >
+          <div className="w-12 h-12 bg-gradient-to-br from-[#450af5] to-[#c4efd9] flex items-center justify-center flex-shrink-0">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+              <path d="M1.69 2.5a4.37 4.37 0 0 1 5.61 0 4.37 4.37 0 0 1 5.61 0 4.37 4.37 0 0 1 0 5.61L8.5 13.5 4.11 8.11a4.37 4.37 0 0 1-2.42-5.61z" />
+            </svg>
+          </div>
+          <span className="flex-1 px-2 text-white text-xs font-semibold truncate">Disukai</span>
+        </Link>
       </div>
 
       {/* Trending Section */}

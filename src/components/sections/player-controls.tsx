@@ -18,11 +18,13 @@ import {
   VolumeX,
   Maximize2,
   X,
+  Sliders,
 } from "lucide-react";
 import { usePlayer } from "@/context/player-context";
 import { useFavorites } from "@/context/favorites-context";
 import { ListenTogetherModal } from "@/components/listen-together-modal";
 import { useListenTogether } from "@/context/listen-together-context";
+import { AudioEnhancementModal } from "@/components/audio-enhancement-modal";
 
 // Random gradient backgrounds for lyrics
 const LYRICS_GRADIENTS = [
@@ -82,6 +84,7 @@ export default function PlayerControls() {
     isShuffle,
     isRepeat,
     isPreviewMode,
+    audioEnhancement,
     togglePlay,
     next,
     previous,
@@ -105,9 +108,13 @@ export default function PlayerControls() {
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
   const [isDraggingSeek, setIsDraggingSeek] = useState(false);
   const [lyricsGradient, setLyricsGradient] = useState(LYRICS_GRADIENTS[0]);
+  const [showAudioEnhancement, setShowAudioEnhancement] = useState(false);
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
   const volumeRef = useRef<HTMLDivElement>(null);
   const seekRef = useRef<HTMLDivElement>(null);
+
+  // Check if any audio enhancement is active
+  const isEnhancementActive = audioEnhancement.bass !== 0 || audioEnhancement.mid !== 0 || audioEnhancement.treble !== 0 || audioEnhancement.spatialAudio || audioEnhancement.normalizer;
 
   // Change gradient when song changes
   useEffect(() => {
@@ -649,6 +656,16 @@ export default function PlayerControls() {
           <MonitorSpeaker size={16} strokeWidth={2} />
         </button>
 
+        {/* Audio Enhancement Button */}
+        <button 
+          onClick={() => setShowAudioEnhancement(true)}
+          className={`w-7 h-7 sm:w-8 sm:h-8 hidden sm:flex items-center justify-center transition-colors ${isEnhancementActive ? "text-[#1db954]" : "text-[#b3b3b3] hover:text-white"}`}
+          aria-label="Audio Enhancement" 
+          title="Audio Enhancement"
+        >
+          <Sliders size={14} className="sm:w-4 sm:h-4" strokeWidth={2} />
+        </button>
+
         {/* Listen Together Button */}
         <ListenTogetherModal />
 
@@ -687,6 +704,9 @@ export default function PlayerControls() {
         </button>
       </div>
     </footer>
+
+    {/* Audio Enhancement Modal */}
+    <AudioEnhancementModal isOpen={showAudioEnhancement} onClose={() => setShowAudioEnhancement(false)} />
     </>
   );
 }

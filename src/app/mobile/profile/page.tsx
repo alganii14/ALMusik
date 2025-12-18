@@ -4,12 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, User, Camera, Check } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 export default function MobileProfilePage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { currentTrack } = usePlayer();
   const [name, setName] = useState(user?.name || "");
   const [saved, setSaved] = useState(false);
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
 
   if (!user) {
     router.push("/login");
@@ -23,7 +28,7 @@ export default function MobileProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button onClick={() => router.back()} className="text-white">
@@ -39,7 +44,7 @@ export default function MobileProfilePage() {
         </button>
       </header>
 
-      <div className="px-4 py-6">
+      <div className={`flex-1 overflow-y-auto px-4 py-6 ${bottomPadding}`}>
         {/* Avatar */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
@@ -94,6 +99,9 @@ export default function MobileProfilePage() {
           </div>
         </div>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

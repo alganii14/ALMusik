@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronDown, ChevronUp, Search, MessageCircle, Mail } from "lucide-react";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 const FAQ_DATA = [
   {
@@ -33,6 +36,8 @@ const FAQ_DATA = [
 
 export default function MobileHelpPage() {
   const router = useRouter();
+  const { currentTrack } = usePlayer();
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -43,7 +48,7 @@ export default function MobileHelpPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center gap-4">
         <button onClick={() => router.back()} className="text-white">
           <ChevronLeft size={28} />
@@ -51,7 +56,7 @@ export default function MobileHelpPage() {
         <h1 className="text-white text-lg font-bold">Bantuan</h1>
       </header>
 
-      <div className="px-4 py-4">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 ${bottomPadding}`}>
         {/* Search */}
         <div className="relative mb-6">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b3b3b3]" />
@@ -116,6 +121,9 @@ export default function MobileHelpPage() {
           </div>
         </div>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

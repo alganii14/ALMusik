@@ -4,12 +4,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ExternalLink, Heart } from "lucide-react";
 import ALMusikLogo from "@/components/almusik-logo";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 export default function MobileAboutPage() {
   const router = useRouter();
+  const { currentTrack } = usePlayer();
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center gap-4">
         <button onClick={() => router.back()} className="text-white">
           <ChevronLeft size={28} />
@@ -17,7 +22,7 @@ export default function MobileAboutPage() {
         <h1 className="text-white text-lg font-bold">Tentang</h1>
       </header>
 
-      <div className="px-4 py-6">
+      <div className={`flex-1 overflow-y-auto px-4 py-6 ${bottomPadding}`}>
         {/* Logo & Version */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-[#1DB954] to-[#169c46] rounded-2xl flex items-center justify-center mb-4">
@@ -77,6 +82,9 @@ export default function MobileAboutPage() {
           </p>
         </div>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

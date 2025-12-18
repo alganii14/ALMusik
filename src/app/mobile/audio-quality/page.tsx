@@ -3,11 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Check, Wifi, WifiOff } from "lucide-react";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 type Quality = "auto" | "low" | "normal" | "high" | "very_high";
 
 export default function MobileAudioQualityPage() {
   const router = useRouter();
+  const { currentTrack } = usePlayer();
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
   const [streamingQuality, setStreamingQuality] = useState<Quality>("auto");
   const [downloadQuality, setDownloadQuality] = useState<Quality>("high");
   const [dataSaver, setDataSaver] = useState(false);
@@ -21,7 +26,7 @@ export default function MobileAudioQualityPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center gap-4">
         <button onClick={() => router.back()} className="text-white">
           <ChevronLeft size={28} />
@@ -29,7 +34,7 @@ export default function MobileAudioQualityPage() {
         <h1 className="text-white text-lg font-bold">Kualitas Audio</h1>
       </header>
 
-      <div className="px-4 py-4">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 ${bottomPadding}`}>
         {/* Data Saver */}
         <div className="bg-[#1a1a1a] rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between">
@@ -113,6 +118,9 @@ export default function MobileAudioQualityPage() {
           Kualitas audio yang lebih tinggi menggunakan lebih banyak data
         </p>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

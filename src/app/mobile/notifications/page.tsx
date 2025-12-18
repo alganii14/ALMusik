@@ -3,9 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Bell, Music, Users, Megaphone } from "lucide-react";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 export default function MobileNotificationsPage() {
   const router = useRouter();
+  const { currentTrack } = usePlayer();
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
   const [newMusic, setNewMusic] = useState(true);
   const [playlistUpdates, setPlaylistUpdates] = useState(true);
   const [friendActivity, setFriendActivity] = useState(false);
@@ -47,7 +52,7 @@ export default function MobileNotificationsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center gap-4">
         <button onClick={() => router.back()} className="text-white">
           <ChevronLeft size={28} />
@@ -55,7 +60,7 @@ export default function MobileNotificationsPage() {
         <h1 className="text-white text-lg font-bold">Notifikasi</h1>
       </header>
 
-      <div className="px-4 py-4">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 ${bottomPadding}`}>
         <div className="bg-[#1a1a1a] rounded-lg overflow-hidden">
           {notifications.map((notif, index) => {
             const Icon = notif.icon;
@@ -92,6 +97,9 @@ export default function MobileNotificationsPage() {
           Kamu juga bisa mengatur notifikasi di pengaturan perangkat
         </p>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

@@ -3,11 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Check, Moon, Sun, Smartphone } from "lucide-react";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 type Theme = "dark" | "light" | "system";
 
 export default function MobileAppearancePage() {
   const router = useRouter();
+  const { currentTrack } = usePlayer();
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
   const [theme, setTheme] = useState<Theme>("dark");
   const [showLyrics, setShowLyrics] = useState(true);
   const [showCanvas, setShowCanvas] = useState(true);
@@ -20,7 +25,7 @@ export default function MobileAppearancePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center gap-4">
         <button onClick={() => router.back()} className="text-white">
           <ChevronLeft size={28} />
@@ -28,7 +33,7 @@ export default function MobileAppearancePage() {
         <h1 className="text-white text-lg font-bold">Tampilan</h1>
       </header>
 
-      <div className="px-4 py-4">
+      <div className={`flex-1 overflow-y-auto px-4 py-4 ${bottomPadding}`}>
         {/* Theme Selection */}
         <div className="mb-6">
           <h2 className="text-[#b3b3b3] text-xs uppercase font-bold mb-3 px-2">
@@ -127,6 +132,9 @@ export default function MobileAppearancePage() {
           Beberapa pengaturan mungkin memerlukan restart aplikasi
         </p>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

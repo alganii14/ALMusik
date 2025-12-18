@@ -16,10 +16,15 @@ import {
   Download,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { usePlayer } from "@/context/player-context";
+import MobilePlayer from "@/components/mobile/mobile-player";
+import MobileNavigation from "@/components/mobile/mobile-navigation";
 
 export default function MobileSettingsPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { currentTrack } = usePlayer();
+  const bottomPadding = currentTrack ? "pb-[130px]" : "pb-[70px]";
 
   const handleLogout = () => {
     logout();
@@ -53,7 +58,7 @@ export default function MobileSettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#121212] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#121212] max-w-md mx-auto relative flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#121212] px-4 py-3 flex items-center gap-4">
         <button onClick={() => router.back()} className="text-white">
@@ -62,7 +67,7 @@ export default function MobileSettingsPage() {
         <h1 className="text-white text-lg font-bold">Pengaturan</h1>
       </header>
 
-      <div className="px-4 pb-8">
+      <div className={`flex-1 overflow-y-auto px-4 pb-8 ${bottomPadding}`}>
         {/* User Info */}
         {user && (
           <div className="flex items-center gap-4 py-4 mb-4 border-b border-[#282828]">
@@ -131,6 +136,9 @@ export default function MobileSettingsPage() {
           ALMusik v1.0.0
         </p>
       </div>
+
+      <MobilePlayer />
+      <MobileNavigation activeTab="home" onTabChange={() => router.push("/mobile")} />
     </div>
   );
 }

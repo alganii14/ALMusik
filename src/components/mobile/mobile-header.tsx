@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Bell, Clock, Settings, User, X } from "lucide-react";
+import { Bell, Clock, Settings, X } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import ALMusikLogo from "@/components/almusik-logo";
 
@@ -14,63 +13,49 @@ export default function MobileHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-gradient-to-b from-[#5c3d6e] via-[#3d2a4a] to-transparent px-4 pt-3 pb-6">
-        <div className="flex items-center justify-between">
-          {/* Left: User Avatar & Greeting */}
-          <div className="flex items-center gap-3">
-            {user ? (
-              <Link href="/mobile/settings" className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1DB954] to-[#169c46] flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">
-                    {user.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-white font-semibold text-base">
-                  Halo, {user.name.split(" ")[0]}
-                </span>
-              </Link>
-            ) : (
-              <Link href="/mobile" className="flex items-center gap-2">
-                <ALMusikLogo size={28} />
-                <span className="text-white font-bold text-lg">ALMusik</span>
-              </Link>
-            )}
+      <header className="sticky top-0 z-30 bg-gradient-to-b from-[#4a2d5c] to-[#121212] px-4 pt-2 pb-4">
+        {/* Top Row */}
+        <div className="flex items-center justify-between mb-3">
+          {/* Left: Logo & Greeting */}
+          <div className="flex items-center gap-2">
+            <ALMusikLogo size={24} />
+            <span className="text-white font-bold text-base">
+              {user ? `Halo, ${user.name.split(" ")[0]}!` : "ALMusik"}
+            </span>
           </div>
           
           {/* Right: Action Buttons */}
           <div className="flex items-center gap-1">
             <button 
               onClick={() => setShowNotifications(true)}
-              className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors relative"
+              className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white"
             >
-              <Bell size={20} />
-              {/* Notification dot */}
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#1DB954] rounded-full" />
+              <Bell size={18} />
             </button>
             <button 
               onClick={() => setShowHistory(true)}
-              className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+              className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white"
             >
-              <Clock size={20} />
+              <Clock size={18} />
             </button>
             <Link 
               href="/mobile/settings"
-              className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors"
+              className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white"
             >
-              <Settings size={20} />
+              <Settings size={18} />
             </Link>
           </div>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 mt-4 overflow-x-auto scrollbar-none -mx-4 px-4">
-          <button className="px-4 py-1.5 bg-white text-black text-sm font-semibold rounded-full whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <button className="px-3 py-1 bg-white text-black text-xs font-semibold rounded-full">
             Semua
           </button>
-          <button className="px-4 py-1.5 bg-[#232323] text-white text-sm font-medium rounded-full whitespace-nowrap hover:bg-[#2a2a2a] transition-colors">
+          <button className="px-3 py-1 bg-[#2a2a2a] text-white text-xs font-medium rounded-full">
             Musik
           </button>
-          <button className="px-4 py-1.5 bg-[#232323] text-white text-sm font-medium rounded-full whitespace-nowrap hover:bg-[#2a2a2a] transition-colors">
+          <button className="px-3 py-1 bg-[#2a2a2a] text-white text-xs font-medium rounded-full">
             Podcast
           </button>
         </div>
@@ -78,7 +63,7 @@ export default function MobileHeader() {
 
       {/* Notifications Modal */}
       {showNotifications && (
-        <div className="fixed inset-0 z-[200] bg-black/90 flex flex-col">
+        <div className="fixed inset-0 z-[200] bg-[#121212] flex flex-col max-w-md mx-auto">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#282828]">
             <h2 className="text-white text-lg font-bold">Notifikasi</h2>
             <button onClick={() => setShowNotifications(false)} className="text-white p-2">
@@ -96,7 +81,7 @@ export default function MobileHeader() {
 
       {/* History Modal */}
       {showHistory && (
-        <div className="fixed inset-0 z-[200] bg-black/90 flex flex-col">
+        <div className="fixed inset-0 z-[200] bg-[#121212] flex flex-col max-w-md mx-auto">
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#282828]">
             <h2 className="text-white text-lg font-bold">Baru Diputar</h2>
             <button onClick={() => setShowHistory(false)} className="text-white p-2">

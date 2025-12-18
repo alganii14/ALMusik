@@ -15,8 +15,8 @@ export default function MobileNavigation({ activeTab, onTabChange }: MobileNavig
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-gradient-to-t from-black via-black/95 to-transparent pt-4 pb-2 px-4 z-40">
-      <div className="flex items-center justify-around bg-[#121212] rounded-full py-2">
+    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#121212] border-t border-[#282828] z-50">
+      <div className="flex items-center justify-around py-2 pb-3">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -25,16 +25,16 @@ export default function MobileNavigation({ activeTab, onTabChange }: MobileNavig
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center gap-1 px-6 py-2 rounded-full transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-6 py-1 transition-all ${
                 isActive 
                   ? "text-white" 
-                  : "text-[#b3b3b3] hover:text-white"
+                  : "text-[#b3b3b3]"
               }`}
             >
               <Icon 
-                size={22} 
+                size={24} 
                 fill={isActive ? "currentColor" : "none"}
-                strokeWidth={isActive ? 2.5 : 2}
+                strokeWidth={isActive ? 2 : 1.5}
               />
               <span className="text-[10px] font-medium">{tab.label}</span>
             </button>

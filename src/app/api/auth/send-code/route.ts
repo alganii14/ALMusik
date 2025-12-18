@@ -3,6 +3,17 @@ import nodemailer from "nodemailer";
 import { promises as fs } from "fs";
 import path from "path";
 
+// CORS headers for mobile app
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 const CODES_PATH = path.join(process.cwd(), "tmp", "verification-codes.json");
 
 // Create transporter for sending emails
@@ -76,9 +87,9 @@ export async function POST(request: Request) {
       `,
     });
 
-    return NextResponse.json({ success: true, message: "Kode verifikasi telah dikirim" });
+    return NextResponse.json({ success: true, message: "Kode verifikasi telah dikirim" }, { headers: corsHeaders });
   } catch (error) {
     console.error("Send code error:", error);
-    return NextResponse.json({ error: "Gagal mengirim kode verifikasi" }, { status: 500 });
+    return NextResponse.json({ error: "Gagal mengirim kode verifikasi" }, { status: 500, headers: corsHeaders });
   }
 }

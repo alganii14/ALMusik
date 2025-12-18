@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-
-// Import shared verification codes store
-const verificationCodes = new Map<string, { code: string; expires: number }>();
-
-// We need to share the map - for now using a simple file-based approach
 import { promises as fs } from "fs";
 import path from "path";
+
+// CORS headers for mobile app
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
 
 const CODES_PATH = path.join(process.cwd(), "tmp", "verification-codes.json");
 
@@ -45,9 +51,9 @@ export async function POST(request: Request) {
     delete codes[email];
     await fs.writeFile(CODES_PATH, JSON.stringify(codes, null, 2));
 
-    return NextResponse.json({ success: true, verified: true });
+    return NextResponse.json({ success: true, verified: true }, { headers: corsHeaders });
   } catch (error) {
     console.error("Verify code error:", error);
-    return NextResponse.json({ error: "Gagal memverifikasi kode" }, { status: 500 });
+    return NextResponse.json({ error: "Gagal memverifikasi kode" }, { status: 500, headers: corsHeaders });
   }
 }

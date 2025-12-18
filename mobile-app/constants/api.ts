@@ -1,4 +1,4 @@
-// Ganti dengan URL API website kamu
+// API URL - pakai Vercel untuk production
 export const API_BASE_URL = "https://al-musik.vercel.app";
 
 // Atau untuk development lokal

@@ -5,7 +5,31 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Helper untuk storage yang support web dan native
+const storage = {
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === "web") {
+      return AsyncStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === "web") {
+      return AsyncStorage.setItem(key, value);
+    }
+    return SecureStore.setItemAsync(key, value);
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === "web") {
+      return AsyncStorage.removeItem(key);
+    }
+    return SecureStore.deleteItemAsync(key);
+  },
+};
 
 interface User {
   id: string;
@@ -35,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUser = async () => {
     try {
-      const userData = await SecureStore.getItemAsync("user");
+      const userData = await storage.getItem("user");
       if (userData) {
         setUser(JSON.parse(userData));
       }
@@ -48,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const usersData = await SecureStore.getItemAsync("users");
+      const usersData = await storage.getItem("users");
       const users = usersData ? JSON.parse(usersData) : [];
 
       const foundUser = users.find(
@@ -62,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: foundUser.email,
           name: foundUser.name,
         };
-        await SecureStore.setItemAsync("user", JSON.stringify(userData));
+        await storage.setItem("user", JSON.stringify(userData));
         setUser(userData);
         return true;
       }
@@ -79,8 +103,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ): Promise<boolean> => {
     try {
-      const usersData = await SecureStore.getItemAsync("users");
-      const users = usersData ? JSON.parse(usersData) : [];
+      const usersData = await storage.getItem("users");
+      let users = [];
+      
+      try {
+        users = usersData ? JSON.parse(usersData) : [];
+        if (!Array.isArray(users)) {
+          users = [];
+        }
+      } catch {
+        users = [];
+      }
 
       const exists = users.some((u: { email: string }) => u.email === email);
       if (exists) return false;
@@ -93,14 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       users.push(newUser);
-      await SecureStore.setItemAsync("users", JSON.stringify(users));
+      await storage.setItem("users", JSON.stringify(users));
 
       const userData = {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
       };
-      await SecureStore.setItemAsync("user", JSON.stringify(userData));
+      await storage.setItem("user", JSON.stringify(userData));
       setUser(userData);
       return true;
     } catch (error) {
@@ -117,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync("user");
+    await storage.removeItem("user");
     setUser(null);
   };
 

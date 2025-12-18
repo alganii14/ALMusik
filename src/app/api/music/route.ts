@@ -4,6 +4,17 @@ import path from "path";
 
 const MUSIC_DATA_PATH = path.join(process.cwd(), "public", "music", "songs.json");
 
+// CORS headers for mobile app
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 interface Song {
   id: string;
   title: string;
@@ -48,10 +59,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ songs: filtered });
     }
 
-    return NextResponse.json({ songs });
+    return NextResponse.json({ songs }, { headers: corsHeaders });
   } catch (error) {
     console.error("Music API error:", error);
-    return NextResponse.json({ error: "Failed to fetch music" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch music" }, { status: 500, headers: corsHeaders });
   }
 }
 
